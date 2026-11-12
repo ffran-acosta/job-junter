@@ -11,10 +11,10 @@ App local para preparar postulaciones a trabajos remotos sin automatizar ni toca
 ## Configuración
 
 ```powershell
-npm install
+pnpm install
 Copy-Item .env.example .env   # completar ANTHROPIC_API_KEY
-npx prisma migrate dev
-npm run dev
+pnpm prisma migrate dev
+pnpm dev
 ```
 
 Completá `preferencias.md` (pretensión salarial, disponibilidad, etc.): la IA lo usa para responder lo que el CV no cubre.
