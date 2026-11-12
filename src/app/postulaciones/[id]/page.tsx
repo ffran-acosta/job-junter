@@ -44,7 +44,7 @@ async function ApplicationDetail({ params }: Pick<PageProps<"/postulaciones/[id]
 
   const analysis = JSON.parse(app.analysis) as Analysis;
   const formAnswers = JSON.parse(app.formAnswers) as GeneratedApplication["formAnswers"];
-  const cvFile = `cv-${app.cvVariant}.html`;
+  const cvFile = `cv-${app.cvVariant}`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -86,10 +86,16 @@ async function ApplicationDetail({ params }: Pick<PageProps<"/postulaciones/[id]
         <p className="text-sm">{analysis.summary}</p>
         <p className="text-sm">
           CV a enviar:{" "}
-          <a href={`/cv/${cvFile}`} target="_blank" rel="noreferrer" className="font-medium underline">
-            {cvFile}
+          <a href={`/cv/${cvFile}.pdf`} className="font-medium underline">
+            Descargar PDF
           </a>{" "}
-          <span className="text-muted">(abrilo e imprimí a PDF con Ctrl+P)</span>
+          <span className="text-muted">
+            ({cvFile} ·{" "}
+            <a href={`/cv/${cvFile}.html`} target="_blank" rel="noreferrer" className="underline">
+              ver HTML
+            </a>
+            )
+          </span>
         </p>
         <List title="Fortalezas" items={analysis.strengths} />
         {analysis.gaps.length > 0 && (

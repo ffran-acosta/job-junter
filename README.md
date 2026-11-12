@@ -6,7 +6,7 @@ App local para preparar postulaciones a trabajos remotos sin automatizar ni toca
 - **Nueva postulación**: a partir de la oferta pegada genera análisis de match, CV recomendado, carta de presentación, respuestas del formulario, mensaje para el recruiter, keywords faltantes y señales de alerta (Claude API).
 - **Postulaciones**: seguimiento por estado, con recordatorio de seguimiento 7 días después de postular.
 - **Respuestas guardadas**: banco de respuestas que se reutiliza en las próximas generaciones.
-- **CVs**: `/cv/cv-es-backend.html` (y las otras variantes) sirve los CVs de `../CV` para imprimirlos a PDF.
+- **CVs**: `/cv/cv-es-backend.html` (y las otras variantes) sirve los CVs de `../CV`; `/cv/cv-es-backend.pdf` los genera como PDF con Chromium headless (puppeteer), respetando el `@page` de `cv.css`.
 
 ## Configuración
 
