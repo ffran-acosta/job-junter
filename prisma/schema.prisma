@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum JobStatus {
+  NEW
+  DISMISSED
+  PREPARED
+}
+
+enum ApplicationStatus {
+  DRAFT
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+  NO_RESPONSE
+}
+
+model Job {
+  id          String       @id @default(cuid())
+  source      String
+  externalId  String
+  title       String
+  company     String
+  url         String
+  location    String
+  description String
+  tags        String
+  salary      String?
+  postedAt    DateTime?
+  score       Int
+  matched     String
+  warnings    String
+  status      JobStatus    @default(NEW)
+  createdAt   DateTime     @default(now())
+  application Application?
+
+  @@unique([source, externalId])
+  @@index([status, score])
+}
+
+model Application {
+  id               String            @id @default(cuid())
+  jobId            String?           @unique
+  job              Job?              @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  title            String
+  company          String
+  url              String?
+  source           String
+  description      String
+  status           ApplicationStatus @default(DRAFT)
+  cvVariant        String
+  matchScore       Int
+  analysis         String
+  coverLetter      String
+  recruiterMessage String
+  formAnswers      String
+  appliedAt        DateTime?
+  followUpAt       DateTime?
+  notes            String            @default("")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([status, followUpAt])
+}
+
+model SavedAnswer {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+}
+
+model SourceSync {
+  source    String   @id
+  fetchedAt DateTime
+  count     Int
+}
