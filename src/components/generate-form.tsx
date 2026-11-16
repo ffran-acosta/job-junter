@@ -21,12 +21,12 @@ export function GenerateForm({ defaults }: { defaults: GenerateDefaults }) {
       <input type="hidden" name="source" value={defaults.source ?? "manual"} />
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="field">
-          Puesto
-          <input name="title" required defaultValue={defaults.title} className="input" />
+          Puesto (opcional, se detecta solo)
+          <input name="title" defaultValue={defaults.title} className="input" />
         </label>
         <label className="field">
-          Empresa
-          <input name="company" required defaultValue={defaults.company} className="input" />
+          Empresa (opcional, se detecta sola)
+          <input name="company" defaultValue={defaults.company} className="input" />
         </label>
       </div>
       <label className="field">
@@ -34,18 +34,18 @@ export function GenerateForm({ defaults }: { defaults: GenerateDefaults }) {
         <input name="url" type="url" defaultValue={defaults.url} className="input" />
       </label>
       <label className="field">
-        Descripción completa de la oferta
+        Oferta o página completa
         <textarea
           name="description"
           required
           rows={14}
           defaultValue={defaults.description}
-          placeholder="Pegá acá todo el texto de la oferta (LinkedIn, web de la empresa, etc.)"
+          placeholder="Pegá la oferta o la página entera del formulario (Ctrl+A, Ctrl+C): LinkedIn, Greenhouse, Lever, Workable, web de la empresa…"
           className="input font-mono text-sm"
         />
       </label>
       <label className="field">
-        Preguntas del formulario (una por línea, opcional)
+        Preguntas extra del formulario (una por línea, opcional; las que vengan en el texto pegado se detectan solas)
         <textarea
           name="questions"
           rows={5}

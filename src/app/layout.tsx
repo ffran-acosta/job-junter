@@ -22,6 +22,7 @@ const NAV = [
   { href: "/", label: "Ofertas" },
   { href: "/postular", label: "Nueva postulación" },
   { href: "/postulaciones", label: "Postulaciones" },
+  { href: "/herramientas", label: "Herramientas" },
   { href: "/respuestas", label: "Respuestas guardadas" },
 ];
 

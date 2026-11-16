@@ -2,8 +2,9 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
-import { answerQuestion, generateApplication } from "@/lib/ai";
+import { answerQuestion, generateApplication, runTool, type ToolResult } from "@/lib/ai";
 import { db } from "@/lib/db";
+import { TOOL_LABELS, type ToolKind } from "@/lib/labels";
 import { syncJobs, type SyncResult } from "@/lib/sources";
 import { ApplicationStatus } from "@/generated/prisma/enums";
 
@@ -35,16 +36,16 @@ export async function createApplication(_prev: string | null, formData: FormData
       .map((q) => q.trim())
       .filter(Boolean),
   };
-  if (!input.title || !input.company || input.description.length < 100) {
-    return "Completá puesto, empresa y pegá la descripción completa de la oferta.";
+  if (input.description.length < 100) {
+    return "Pegá el texto completo de la oferta.";
   }
 
   let id: string;
   try {
     const result = await generateApplication(input);
     const data = {
-      title: input.title,
-      company: input.company,
+      title: input.title || result.title,
+      company: input.company || result.company,
       url: text(formData, "url") || null,
       source: text(formData, "source") || "manual",
       description: input.description,
@@ -134,4 +135,18 @@ export async function saveAnswer(formData: FormData) {
 export async function deleteSavedAnswer(id: string) {
   await db.savedAnswer.delete({ where: { id }, select: { id: true } });
   refresh();
+}
+
+export type ToolState = { result: ToolResult; error?: never } | { error: string; result?: never } | null;
+
+export async function runToolAction(_prev: ToolState, formData: FormData): Promise<ToolState> {
+  const kind = text(formData, "kind");
+  const input = text(formData, "text");
+  if (!(kind in TOOL_LABELS)) return { error: "Elegí qué querés generar." };
+  if (!input) return { error: "Pegá la oferta o el mensaje." };
+  try {
+    return { result: await runTool(kind as ToolKind, input, text(formData, "extra")) };
+  } catch (error) {
+    return { error: `No se pudo generar: ${(error as Error).message}` };
+  }
 }
