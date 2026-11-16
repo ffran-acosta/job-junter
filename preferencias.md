@@ -9,7 +9,7 @@ Completá lo que falte. Si algo queda vacío, la respuesta generada lo marca com
 - Dedicación: full time
 - Horario: flexible, con buena superposición con horarios de América
 - Contratación aceptada: contractor / freelance / relación de dependencia
-- Nivel de inglés: avanzado (lectura técnica fluida, comunicación escrita); conversación:
+- Nivel de inglés: avanzado (lectura técnica fluida, comunicación escrita); conversación: intermedia, entiendo todo y puedo mantener reuniones, me falta práctica para hablar con fluidez
 - ¿Requiere visa/sponsorship?: no, trabajo remoto desde Argentina
 - ¿Dispuesto a relocalizarse?: preferentemente no; abierto a viajar a oficina en CABA o Rosario si es híbrido
 - Portfolio / GitHub: github.com/ffran-acosta
