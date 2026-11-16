@@ -3,7 +3,8 @@ import { Suspense } from "react";
 import { dismissJob } from "./actions";
 import { SyncButton } from "@/components/sync-button";
 import { db } from "@/lib/db";
-import { formatDate } from "@/lib/labels";
+import type { Seniority } from "@/generated/prisma/enums";
+import { formatDate, SENIORITY_LABELS } from "@/lib/labels";
 import { SOURCE_NAMES } from "@/lib/sources";
 
 const PAGE_SIZE = 30;
@@ -15,7 +16,7 @@ export default function FeedPage({ searchParams }: PageProps<"/">) {
         <div>
           <h1 className="text-2xl font-semibold">Ofertas remotas</h1>
           <p className="text-sm text-muted">
-            Abiertas a Argentina / LATAM, ordenadas por coincidencia con tu stack.
+            Abiertas a Argentina / LATAM, por coincidencia con tu stack o por fecha.
           </p>
         </div>
         <SyncButton />
@@ -35,12 +36,23 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const params = await searchParams;
   const minScore = Number(params.min ?? 20);
   const page = Math.max(1, Number(params.page ?? 1));
-  const where = { status: "NEW" as const, score: { gte: minScore } };
+  const seniority = Object.hasOwn(SENIORITY_LABELS, String(params.s)) ? (params.s as Seniority) : undefined;
+  const recent = params.order === "recent";
+  const where = { status: "NEW" as const, score: { gte: minScore }, seniority };
+  const href = (changes: Record<string, string | number | undefined>) => {
+    const query = { min: minScore, s: seniority, order: recent ? "recent" : undefined, ...changes };
+    const search = new URLSearchParams(
+      Object.entries(query).flatMap(([k, v]) => (v === undefined ? [] : [[k, String(v)]])),
+    );
+    return `/?${search}`;
+  };
 
   const [jobs, total] = await Promise.all([
     db.job.findMany({
       where,
-      orderBy: [{ score: "desc" }, { postedAt: "desc" }],
+      orderBy: recent
+        ? [{ postedAt: { sort: "desc", nulls: "last" } }, { score: "desc" }]
+        : [{ score: "desc" }, { postedAt: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
@@ -53,6 +65,7 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
         salary: true,
         postedAt: true,
         score: true,
+        seniority: true,
         matched: true,
         warnings: true,
       },
@@ -68,12 +81,31 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
         {[0, 20, 40, 60].map((value) => (
           <Link
             key={value}
-            href={`/?min=${value}`}
+            href={href({ min: value, page: undefined })}
             className={value === minScore ? "badge border-accent text-accent" : "badge"}
           >
             {value}
           </Link>
         ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted">Seniority:</span>
+        {[undefined, ...(Object.keys(SENIORITY_LABELS) as Seniority[])].map((value) => (
+          <Link
+            key={value ?? "all"}
+            href={href({ s: value, page: undefined })}
+            className={value === seniority ? "badge border-accent text-accent" : "badge"}
+          >
+            {value ? SENIORITY_LABELS[value] : "Todos"}
+          </Link>
+        ))}
+        <span className="ml-auto text-muted">Orden:</span>
+        <Link href={href({ order: undefined, page: undefined })} className={recent ? "badge" : "badge border-accent text-accent"}>
+          Puntaje
+        </Link>
+        <Link href={href({ order: "recent", page: undefined })} className={recent ? "badge border-accent text-accent" : "badge"}>
+          Más nuevas
+        </Link>
       </div>
       {jobs.length === 0 && (
         <p className="card text-sm text-muted">No hay ofertas. Tocá «Buscar ofertas nuevas» o bajá el puntaje mínimo.</p>
@@ -91,6 +123,7 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
                   </a>
                   <p className="text-sm text-muted">
                     {job.company} · {job.location} · {formatDate(job.postedAt)}
+                    {job.seniority !== "UNKNOWN" && ` · ${SENIORITY_LABELS[job.seniority]}`}
                     {job.salary && ` · ${job.salary}`}
                   </p>
                 </div>
@@ -132,11 +165,11 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
       </ul>
       {pages > 1 && (
         <div className="flex items-center gap-3 text-sm">
-          {page > 1 && <Link href={`/?min=${minScore}&page=${page - 1}`}>← Anterior</Link>}
+          {page > 1 && <Link href={href({ page: page - 1 })}>← Anterior</Link>}
           <span className="text-muted">
             Página {page} de {pages}
           </span>
-          {page < pages && <Link href={`/?min=${minScore}&page=${page + 1}`}>Siguiente →</Link>}
+          {page < pages && <Link href={href({ page: page + 1 })}>Siguiente →</Link>}
         </div>
       )}
     </>

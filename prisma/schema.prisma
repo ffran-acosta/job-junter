@@ -13,6 +13,14 @@ enum JobStatus {
   PREPARED
 }
 
+enum Seniority {
+  TRAINEE
+  JUNIOR
+  SEMI_SENIOR
+  SENIOR
+  UNKNOWN
+}
+
 enum ApplicationStatus {
   DRAFT
   APPLIED
@@ -35,6 +43,7 @@ model Job {
   salary      String?
   postedAt    DateTime?
   score       Int
+  seniority   Seniority    @default(UNKNOWN)
   matched     String
   warnings    String
   status      JobStatus    @default(NEW)
@@ -43,6 +52,7 @@ model Job {
 
   @@unique([source, externalId])
   @@index([status, score])
+  @@index([status, postedAt])
 }
 
 model Application {

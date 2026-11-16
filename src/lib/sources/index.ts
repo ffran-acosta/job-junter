@@ -34,7 +34,7 @@ export async function syncJobs(): Promise<SyncResult[]> {
       try {
         const jobs = await source.fetchJobs();
         for (const job of jobs) {
-          const { score, matched, warnings } = scoreJob(job.title, `${job.tags.join(" ")}\n${job.description}`);
+          const { score, seniority, matched, warnings } = scoreJob(job.title, `${job.tags.join(" ")}\n${job.description}`);
           const data = {
             title: job.title,
             company: job.company,
@@ -45,6 +45,7 @@ export async function syncJobs(): Promise<SyncResult[]> {
             salary: job.salary ?? null,
             postedAt: job.postedAt ?? null,
             score,
+            seniority,
             matched: JSON.stringify(matched),
             warnings: JSON.stringify([...job.warnings, ...warnings]),
           };

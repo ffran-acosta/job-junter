@@ -1,4 +1,4 @@
-import type { ApplicationStatus } from "@/generated/prisma/enums";
+import type { ApplicationStatus, Seniority } from "@/generated/prisma/enums";
 
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   DRAFT: "Borrador",
@@ -7,6 +7,14 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   OFFER: "Oferta",
   REJECTED: "Rechazado",
   NO_RESPONSE: "Sin respuesta",
+};
+
+export const SENIORITY_LABELS: Record<Seniority, string> = {
+  TRAINEE: "Trainee",
+  JUNIOR: "Junior",
+  SEMI_SENIOR: "Semi Senior",
+  SENIOR: "Senior",
+  UNKNOWN: "Sin especificar",
 };
 
 export const TOOL_LABELS = {
