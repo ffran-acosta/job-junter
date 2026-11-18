@@ -1,3 +1,5 @@
+import type { Seniority } from "@/generated/prisma/enums";
+
 const CORE: Record<string, RegExp> = {
   NestJS: /\bnest\.?js\b|\bnestjs\b/i,
   "Node.js": /\bnode(\.?js)?\b/i,
@@ -31,6 +33,7 @@ const NOT_DEV_TITLE = /\b(sales|marketing|designer|illustrator|recruiter|support
 
 export interface Score {
   score: number;
+  seniority: Seniority;
   matched: string[];
   warnings: string[];
 }
@@ -51,15 +54,27 @@ export function scoreJob(title: string, body: string): Score {
     .filter((n) => n > 0 && n < 20);
   const maxYears = years.length ? Math.max(...years) : 0;
   if (maxYears >= 5) warnings.push(`Pide ${maxYears}+ años: postulate igual si el stack coincide`);
-  if (/\b(senior|sr\.?|lead|staff|principal)\b/i.test(title)) {
-    warnings.push("Puesto senior: apostá a la experiencia en producción");
-  }
+  const seniority = detectSeniority(title, maxYears);
+  if (seniority === "SENIOR") warnings.push("Puesto senior: apostá a la experiencia en producción");
 
   return {
     score: Math.max(0, Math.min(100, score)),
+    seniority,
     matched: [...coreMatched, ...secondaryMatched],
     warnings,
   };
+}
+
+// El título manda; si no dice nada, se infiere de los años pedidos.
+function detectSeniority(title: string, maxYears: number): Seniority {
+  if (/\b(trainee|intern|internship|pasante|pasantía)\b/i.test(title)) return "TRAINEE";
+  if (/\b(semi[\s-]?senior|ssr|mid[\s-]?level|mid|intermediate)\b/i.test(title)) return "SEMI_SENIOR";
+  if (/\b(junior|jr\.?|entry[\s-]?level)\b/i.test(title)) return "JUNIOR";
+  if (/\b(senior|sr\.?|lead|staff|principal)\b/i.test(title)) return "SENIOR";
+  if (maxYears >= 5) return "SENIOR";
+  if (maxYears >= 3) return "SEMI_SENIOR";
+  if (maxYears >= 1) return "JUNIOR";
+  return "UNKNOWN";
 }
 
 const LATAM_OK = /worldwide|anywhere|global|americas|latam|latin america|south america|argentina|lat\.?am/i;
