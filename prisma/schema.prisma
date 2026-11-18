@@ -71,13 +71,18 @@ model Application {
   coverLetter      String
   recruiterMessage String
   formAnswers      String
+  additions        String            @default("{}")
+  linkedinUrl      String?
   appliedAt        DateTime?
   followUpAt       DateTime?
+  interviewAt      DateTime?
   notes            String            @default("")
   createdAt        DateTime          @default(now())
+  deletedAt        DateTime?
   updatedAt        DateTime          @updatedAt
 
   @@index([status, followUpAt])
+  @@index([deletedAt, updatedAt])
 }
 
 model SavedAnswer {
