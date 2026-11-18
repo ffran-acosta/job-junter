@@ -2,9 +2,11 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { ToolForm } from "@/components/tool-form";
+import { db } from "@/lib/db";
+import { formatDate, formatDateTime, STATUS_LABELS, TOOL_LABELS, type ToolKind } from "@/lib/labels";
 import { CV_VARIANTS, loadPreferences } from "@/lib/profile";
 
-export default function ToolsPage() {
+export default function ToolsPage({ searchParams }: PageProps<"/herramientas">) {
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -13,12 +15,51 @@ export default function ToolsPage() {
           Para lo que no es una postulación completa: mails, mensajes, preparación de entrevistas. No se guarda nada.
         </p>
       </div>
-      <ToolForm />
+      <Suspense fallback={<p className="text-sm text-muted">Cargando…</p>}>
+        <PrefilledToolForm searchParams={searchParams} />
+      </Suspense>
       <Suspense fallback={<p className="text-sm text-muted">Cargando…</p>}>
         <ProfileCard />
       </Suspense>
     </div>
   );
+}
+
+// Con ?kind=…&app=… arranca con la herramienta elegida y los datos de esa postulación cargados.
+async function PrefilledToolForm({ searchParams }: Pick<PageProps<"/herramientas">, "searchParams">) {
+  const { kind, app } = await searchParams;
+  const application =
+    typeof app === "string"
+      ? await db.application.findUnique({
+          where: { id: app },
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            url: true,
+            status: true,
+            description: true,
+            appliedAt: true,
+            interviewAt: true,
+            notes: true,
+          },
+        })
+      : null;
+  const text = application
+    ? [
+        `Puesto: ${application.title}`,
+        `Empresa: ${application.company}`,
+        application.url && `Link: ${application.url}`,
+        `Estado: ${STATUS_LABELS[application.status]}`,
+        application.appliedAt && `Postulado el: ${formatDate(application.appliedAt)}`,
+        application.interviewAt && `Entrevista: ${formatDateTime(application.interviewAt)}`,
+        application.notes && `Notas del candidato:\n${application.notes}`,
+      ]
+        .filter(Boolean)
+        .join("\n") + `\n\n${application.description}`
+    : "";
+  const defaultKind = typeof kind === "string" && kind in TOOL_LABELS ? (kind as ToolKind) : "email";
+  return <ToolForm key={`${defaultKind}-${application?.id}`} defaultKind={defaultKind} defaultText={text} />;
 }
 
 async function ProfileCard() {

@@ -1,7 +1,7 @@
 # Preferencias para postulaciones
 
 La IA usa este archivo para responder las preguntas de los formularios que el CV no cubre.
-Completá lo que falte. Si algo queda vacío, la respuesta generada lo marca como [COMPLETAR].
+Completá lo que falte. Si algo queda vacío, la respuesta generada lo deja afuera y te propone abajo una frase opcional para completarlo.
 
 - Ubicación: Pergamino, Buenos Aires, Argentina (UTC-3)
 - Modalidad: preferentemente remoto; híbrido negociable si la oficina queda cerca de Pergamino (CABA o Rosario, sin problema)

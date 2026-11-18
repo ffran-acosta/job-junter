@@ -2,18 +2,19 @@
 
 import { useActionState } from "react";
 import { runToolAction } from "@/app/actions";
-import { TOOL_LABELS } from "@/lib/labels";
+import { TOOL_LABELS, type ToolKind } from "@/lib/labels";
 import { CopyButton } from "./copy-button";
+import { GeneratedText } from "./generated-text";
 import { SubmitButton } from "./submit-button";
 
-export function ToolForm() {
+export function ToolForm({ defaultKind, defaultText }: { defaultKind: ToolKind; defaultText: string }) {
   const [state, action] = useActionState(runToolAction, null);
   return (
     <div className="flex flex-col gap-4">
       <form action={action} className="card flex flex-col gap-3">
         <label className="field">
           Qué querés generar
-          <select name="kind" className="input" defaultValue="email">
+          <select name="kind" className="input" defaultValue={defaultKind}>
             {Object.entries(TOOL_LABELS).map(([kind, label]) => (
               <option key={kind} value={kind}>
                 {label}
@@ -27,6 +28,7 @@ export function ToolForm() {
             name="text"
             required
             rows={12}
+            defaultValue={defaultText}
             placeholder="Pegá la oferta, el mensaje del recruiter o lo que tengas (de cualquier sitio)"
             className="input font-mono text-sm"
           />
@@ -55,10 +57,7 @@ export function ToolForm() {
               <CopyButton text={state.result.subject} label="Copiar asunto" />
             </div>
           )}
-          <p className="whitespace-pre-wrap text-sm">{state.result.body}</p>
-          <div>
-            <CopyButton text={state.result.body} label="Copiar texto" />
-          </div>
+          <GeneratedText key={state.result.body} text={state.result.body} additions={state.result.additions} />
         </div>
       )}
     </div>

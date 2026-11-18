@@ -9,6 +9,15 @@ import { CV_VARIANTS, loadCvTexts, loadPreferences } from "./profile";
 // Usa la CLI de Claude Code (`claude -p`), así corre con la suscripción y no con créditos de la API.
 const MODEL = process.env.CLAUDE_MODEL ?? "sonnet";
 
+const AdditionSchema = z.object({
+  label: z.string().describe("Qué dato falta, corto (ej: 'Pretensión salarial')"),
+  sentence: z.string().describe("Oración lista para sumar al texto, con ___ donde va el dato"),
+});
+export type Addition = z.infer<typeof AdditionSchema>;
+const additions = z
+  .array(AdditionSchema)
+  .describe("Datos que no están en el CV ni en las preferencias y mejorarían el texto; vacío si no falta nada");
+
 export const ApplicationSchema = z.object({
   title: z.string().describe("Puesto, tal como figura en la oferta"),
   company: z.string().describe("Empresa que contrata; 'Sin especificar' si no aparece"),
@@ -25,15 +34,18 @@ export const ApplicationSchema = z.object({
   missingKeywords: z.array(z.string()).describe("Palabras clave de la oferta que no aparecen en el CV elegido"),
   redFlags: z.array(z.string()).describe("Señales de alerta de la oferta; vacío si no hay"),
   coverLetter: z.string().describe("Carta de presentación en el idioma de la oferta"),
+  coverLetterAdditions: additions,
   recruiterMessage: z.string().describe("Mensaje corto (máx. 600 caracteres) para el recruiter, en el idioma de la oferta"),
-  formAnswers: z.array(z.object({ question: z.string(), answer: z.string() })),
+  recruiterMessageAdditions: additions,
+  formAnswers: z.array(z.object({ question: z.string(), answer: z.string(), additions })),
 });
 export type GeneratedApplication = z.infer<typeof ApplicationSchema>;
 
 const INSTRUCTIONS = `Sos un asistente que prepara postulaciones laborales para el candidato cuyos CVs, preferencias y respuestas guardadas vienen en el mensaje. Busca su primer o siguiente trabajo remoto como desarrollador backend / fullstack y se postula a cualquier seniority. Respondé solo con el JSON pedido.
 
 Reglas:
-- Nunca inventes experiencia, empresas, métricas, títulos ni tecnologías que no estén en el CV o en las preferencias. Si algo falta, escribí [COMPLETAR: qué falta] para que el candidato lo complete.
+- Nunca inventes experiencia, empresas, métricas, títulos ni tecnologías que no estén en el CV o en las preferencias. Si algo falta, no lo inventes.
+- Los textos se copian y se envían tal cual: nunca escribas placeholders, corchetes ni huecos ([COMPLETAR], [nombre], ___, XXX). Si falta un dato, redactá el texto completo sin él y proponelo aparte en el campo de additions como una oración opcional con ___ donde va el dato.
 - Escribí en el idioma de la oferta. Tono profesional, directo y humano; sin frases genéricas ("soy apasionado", "me encantaría formar parte") ni exageraciones.
 - Carta de presentación: 180 a 280 palabras, 3 o 4 párrafos. Conectá 2 o 3 requisitos concretos de la oferta con experiencia concreta del CV. Si pide más años de los que tiene, compensá con lo que construyó en producción, sin mencionar la falta de años.
 - Respuestas de formulario: concisas y listas para pegar. Si una pregunta del banco de respuestas guardadas coincide, reutilizá esa respuesta adaptándola.
@@ -116,19 +128,19 @@ export function generateApplication(job: JobInput): Promise<GeneratedApplication
   );
 }
 
-const AnswerSchema = z.object({ answer: z.string() });
+const AnswerSchema = z.object({ answer: z.string(), additions });
 
-export async function answerQuestion(job: JobInput, question: string): Promise<string> {
-  const { answer } = await parse(
+export function answerQuestion(job: JobInput, question: string): Promise<z.infer<typeof AnswerSchema>> {
+  return parse(
     AnswerSchema,
     `<oferta>\nPuesto: ${job.title}\nEmpresa: ${job.company}\n\n${job.description}\n</oferta>\n\nRespondé esta pregunta del formulario de postulación, lista para pegar:\n${question}`,
   );
-  return answer;
 }
 
 export const ToolResultSchema = z.object({
   subject: z.string().describe("Asunto del mail; vacío si el texto no es un mail"),
   body: z.string().describe("Texto final, listo para copiar y pegar"),
+  additions,
 });
 export type ToolResult = z.infer<typeof ToolResultSchema>;
 
@@ -144,7 +156,7 @@ const TOOL_TASKS: Record<ToolKind, string> = {
   "follow-up":
     "Escribí un mail breve de seguimiento de una postulación enviada hace una semana o más sin respuesta. 60 a 100 palabras, sin sonar insistente, aportando un dato nuevo de valor (un proyecto o habilidad relevante del CV). Con asunto.",
   "thank-you":
-    "Escribí un mail de agradecimiento después de una entrevista. 80 a 140 palabras: agradecé, retomá un tema concreto de la entrevista si aparece en el texto (si no, [COMPLETAR: tema que se habló]) y reafirmá el interés. Con asunto.",
+    "Escribí un mail de agradecimiento después de una entrevista. 80 a 140 palabras: agradecé, retomá un tema concreto de la entrevista si aparece en el texto (si no, cerrá sin mencionarlo y proponé en additions una oración sobre el tema que se habló) y reafirmá el interés. Con asunto.",
   "interview-prep":
     "Prepará al candidato para la entrevista de esta oferta. En body: 1) 8 a 10 preguntas probables (técnicas y de comportamiento) con una respuesta sugerida basada solo en el CV, 2) cómo encarar las gaps de la oferta, 3) 5 preguntas para hacerle a la empresa. Usá títulos y listas en texto plano. Sin asunto.",
   salary:

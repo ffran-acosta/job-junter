@@ -2,12 +2,21 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { dismissJob } from "./actions";
 import { SyncButton } from "@/components/sync-button";
+import { overdueWhere } from "@/lib/applications";
 import { db } from "@/lib/db";
 import type { Seniority } from "@/generated/prisma/enums";
-import { formatDate, SENIORITY_LABELS } from "@/lib/labels";
+import { formatDate, linkedinSearchUrl, SENIORITY_LABELS, STATUS_LABELS } from "@/lib/labels";
 import { SOURCE_NAMES } from "@/lib/sources";
 
 const PAGE_SIZE = 30;
+
+// Para comparar empresas entre fuentes: "Acme, Inc." y "acme" son la misma.
+function companyKey(company: string): string {
+  return company
+    .toLowerCase()
+    .replace(/\b(inc|llc|ltd|gmbh|s\.?a|s\.?r\.?l|corp|co)\b\.?/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
 
 export default function FeedPage({ searchParams }: PageProps<"/">) {
   return (
@@ -38,9 +47,15 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const page = Math.max(1, Number(params.page ?? 1));
   const seniority = Object.hasOwn(SENIORITY_LABELS, String(params.s)) ? (params.s as Seniority) : undefined;
   const recent = params.order === "recent";
-  const where = { status: "NEW" as const, score: { gte: minScore }, seniority };
+  const q = typeof params.q === "string" ? params.q.trim() : "";
+  const where = {
+    status: "NEW" as const,
+    score: { gte: minScore },
+    seniority,
+    ...(q && { OR: [{ title: { contains: q } }, { company: { contains: q } }, { tags: { contains: q } }] }),
+  };
   const href = (changes: Record<string, string | number | undefined>) => {
-    const query = { min: minScore, s: seniority, order: recent ? "recent" : undefined, ...changes };
+    const query = { min: minScore, s: seniority, order: recent ? "recent" : undefined, q: q || undefined, ...changes };
     const search = new URLSearchParams(
       Object.entries(query).flatMap(([k, v]) => (v === undefined ? [] : [[k, String(v)]])),
     );
@@ -73,9 +88,39 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
     db.job.count({ where }),
   ]);
   const pages = Math.ceil(total / PAGE_SIZE);
+  const [applications, overdue] = await Promise.all([
+    db.application.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+      select: { id: true, company: true, title: true, status: true },
+    }),
+    db.application.count({ where: overdueWhere(new Date()) }),
+  ]);
+  const appliedByCompany = new Map(applications.map((a) => [companyKey(a.company), a]));
 
   return (
     <>
+      {overdue > 0 && (
+        <Link href="/postulaciones" className="card border-amber-500 text-sm hover:underline">
+          Tenés {overdue} {overdue === 1 ? "seguimiento pendiente" : "seguimientos pendientes"} →
+        </Link>
+      )}
+      <form action="/" className="flex gap-2">
+        <input type="hidden" name="min" value={minScore} />
+        {seniority && <input type="hidden" name="s" value={seniority} />}
+        {recent && <input type="hidden" name="order" value="recent" />}
+        <input
+          name="q"
+          type="search"
+          defaultValue={q}
+          placeholder="Buscar por puesto, empresa o tecnología"
+          className="input flex-1 text-sm"
+        />
+        <button type="submit" className="btn-secondary">
+          Buscar
+        </button>
+      </form>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted">{total} ofertas · puntaje mínimo:</span>
         {[0, 20, 40, 60].map((value) => (
@@ -114,6 +159,7 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
         {jobs.map((job) => {
           const matched = JSON.parse(job.matched) as string[];
           const warnings = JSON.parse(job.warnings) as string[];
+          const previous = appliedByCompany.get(companyKey(job.company));
           return (
             <li key={job.id} className="card flex flex-col gap-2">
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -138,6 +184,15 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
                   ))}
                 </div>
               )}
+              {previous && (
+                <p className="text-xs text-accent">
+                  Ya tenés una postulación a {previous.company}:{" "}
+                  <Link href={`/postulaciones/${previous.id}`} className="underline">
+                    {previous.title}
+                  </Link>{" "}
+                  ({STATUS_LABELS[previous.status]})
+                </p>
+              )}
               {warnings.map((w) => (
                 <p key={w} className="text-xs text-amber-600">
                   ⚠ {w}
@@ -147,6 +202,14 @@ async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
                 <Link href={`/postular?jobId=${job.id}`} className="btn">
                   Preparar postulación
                 </Link>
+                <a
+                  href={linkedinSearchUrl(job.title, job.company)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary"
+                >
+                  Buscar en LinkedIn
+                </a>
                 <form action={dismissJob.bind(null, job.id)}>
                   <button type="submit" className="btn-secondary">
                     Descartar
