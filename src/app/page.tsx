@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { dismissJob } from "./actions";
 import { SyncButton } from "@/components/sync-button";
@@ -42,6 +43,7 @@ export default function FeedPage({ searchParams }: PageProps<"/">) {
 }
 
 async function JobList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+  await connection();
   const params = await searchParams;
   const minScore = Number(params.min ?? 20);
   const page = Math.max(1, Number(params.page ?? 1));
